@@ -1,0 +1,35 @@
+
+# Before running any shell scripts (.sh), edit to remove /r
+# Use VS Code -> change CRLF to LF, save file
+
+wsl
+
+sudo apt-get update
+sudo apt-get upgrade
+
+sudo apt-get install git libuv1-dev libssl-dev gcc g++ cmake make
+sudo apt-get install zlib1g-dev
+
+git clone https://github.com/uWebSockets/uWebSockets 
+cd uWebSockets
+git checkout e94b6e1
+mkdir build
+cd build
+cmake ..
+make 
+sudo make install
+cd ../..
+sudo ln -s /usr/lib64/libuWS.so /usr/lib/libuWS.so
+sudo rm -r uWebSockets
+
+# install-ubuntu-MPC.sh (copied from CarND-MPC-Quizzes repo)
+sudo apt-get install gfortran
+sudo apt-get install unzip
+
+wget https://www.coin-or.org/download/source/Ipopt/Ipopt-3.12.11.zip && unzip Ipopt-3.12.11.zip && rm Ipopt-3.12.11.zip
+./install_ipopt.sh ./Ipopt-3.12.11
+
+sudo apt-get install cppad
+sudo apt-get install gnuplot
+sudo apt-get install python-matplotlib
+sudo apt-get install python2.7-dev
