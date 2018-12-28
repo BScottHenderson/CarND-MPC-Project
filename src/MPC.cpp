@@ -88,10 +88,6 @@ class FG_eval {
       AD<double> a     = vars[a_start     + t];
       fg[0] += 10 * CppAD::pow(delta, 2);
       fg[0] += 10 * CppAD::pow(a, 2);
-
-      // Add a penalty for speed + steering.
-      //AD<double> v = vars[v_start + t];
-      //fg[0] += 700 * CppAD::pow(delta * v, 2);
     }
 
     // Add some temporal smoothness by penalizing a large steering angle and
@@ -102,7 +98,7 @@ class FG_eval {
       AD<double> delta1 = vars[delta_start + t+1];
       AD<double> a0     = vars[a_start     + t];
       AD<double> a1     = vars[a_start     + t+1];
-      fg[0] += 200 * CppAD::pow(delta1 - delta0, 2);
+      fg[0] += 100 * CppAD::pow(delta1 - delta0, 2);
       fg[0] += 100 * CppAD::pow(a1 - a0, 2);
     }
 
