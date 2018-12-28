@@ -6,6 +6,8 @@
 
 class MPC {
  public:
+  double delta_limit;
+
   MPC();
 
   virtual ~MPC();
