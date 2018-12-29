@@ -1,0 +1,46 @@
+\documentclass[12pt,draft]{report}
+\usepackage{geometry}
+\geometry{
+    legalpaper,
+    landscape,
+    margin=0.25in
+}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{textcomp}% get rid of warnings when loading gensymb
+\usepackage{gensymb}% for \degree
+\usepackage{listings}% http://ctan.org/pkg/listings
+\lstset{
+    breaklines=true,
+    mathescape
+}
+\usepackage{booktabs}% http://ctan.org/pkg/booktabs
+\usepackage{enumitem}
+
+\begin{document}
+\noindent\rule{\textwidth}{1pt}
+
+MPC Model
+\begin{align}
+    x_{t+1} &= x_t + v_t \cdot cos(\psi_t) \cdot dt \\
+    y_{t+1} &= y_t + v_t \cdot sin(\psi_t) \cdot dt \\
+    \psi_{t+1} &= \psi_t + \frac{v_t}{L_f} \cdot \delta_t \cdot dt \\
+    v_{t+1} &= v_t + a_t \cdot dt \\
+    cte_{t+1} &= f(x_t) - y_t + v_t \cdot sin(e\psi_t) \cdot dt \\
+    e\psi_{t+1} &= \psi_t - {\psi des}_t + \frac{v_t}{L_f} \cdot \delta_t \cdot dt
+\end{align}
+\-\hspace{0.5cm} Constraints
+\begin{align}
+    \delta &\in [-25\degree, +25\degree] \\
+    a &\in [-1.0, +1.0]
+\end{align}
+\-\hspace{0.5cm} Cost
+\begin{equation}
+    J = \sum_{t=1}^N{(cte_t - cte_{ref})^2 + (e\psi_t - e\psi_{ref})^2 + ...}
+\end{equation}
+MPC state feedback loop: \\
+Pass the current state to the MPC. \\
+Call the optimization solver. The solver uses the state, model, constraints and cost function to return a control vector that minimizes the cost function.\\
+
+\noindent\rule{\textwidth}{1pt}
+\end{document}
