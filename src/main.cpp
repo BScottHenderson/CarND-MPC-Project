@@ -103,12 +103,13 @@ int main() {
           // Multiply the steering angle by -1: in the update equation for delta
           // a positive value indicates a counter-clockwise (left) turn while in
           // the simulator a positive value indicates a clockwise (right) turn.
+          // We also divide by the delta_limit value used to limit steering changes
+          // in the model. This translates the steering angle from the range
+          // [-delta_limit,+deltaLimit] to [-1,_1] as required by the simulator.
           double steer_value    = -vars[0] / mpc.delta_limit;
           double throttle_value = vars[1];
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"]       = throttle_value;
 
