@@ -3,3 +3,11 @@ build
 tags
 .editorconfig
 .DS_Store
+
+# LaTex Workshop intermediate files
+.aux
+.fdb_latexmk
+.fls
+.synctex.gz
+
+.log
