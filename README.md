@@ -54,6 +54,8 @@ I also added a term for the difference between the current car velocity and a re
 
 I then added a couple of terms to the cost function designed to minimize steering and throttle changes. Finally I added a couple of terms designed to minimize the rate of steering and throttle actuator changes. These final four terms do nothing for keeping the car on the road but are necessary to smooth the ride, and important, albeit secondary, goal.
 
+Weights for the various cost terms were derived entirely by trial and error. Many trials and much error. As usual I feel there has to be a better way.
+
 ### The Code
 
 Following the directory structure in the original CarND-MPC-Project repository, all C++ source code for the PID controller project is in the 'src' subdirectory.
