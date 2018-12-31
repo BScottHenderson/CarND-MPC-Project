@@ -7,7 +7,7 @@
 
 ---
 
-The goal of this project is to implement a MPC to set steering angle and throttle for a vehicle.
+The goal of this project is to implement a Model Predictive Controller (MPC) to set steering angle and throttle for a vehicle.
 
 As usual the model itself is fairly straightforward. The difficulty - otherwise known as the interesting part - lies in setting hyperparameters and in tuning the model via multipliers for components of the cost function. Details below.
 
@@ -20,30 +20,39 @@ No further action is required from the user. If all goes well the vehicle will d
 
 ### MPC
 
-In this project we use a Model Predictive Controller (MPC) to set both the steering angle and throttle value for a vehicle based on minimizing a cost function. This is an example of a kinematic vehicle model, relatively simple and easy to implement which means that it can be updated in real time.
+In this project we use a Model Predictive Controller (MPC) to set both the steering angle and throttle value for a vehicle.
 
-MPC implementation consists of a cost function and a series of constraints. The solver will derive values for the actuators (steering and throttle) based on minimizing the cost function withint the specified constraints.
+The basic idea for the MPC is to use an optimizer to determine control inputs that minimize a cost function. This is an example of a kinematic vehicle model, relatively simple and easy to implement which means that it can be updated in real time.
 
-#### Cost Function
+For each step we implement the first set of control inputs thus bringing the vehicle to a new state. At this point we repeat the process to find the next set of control inputs.
 
-The cost function can include many terms. For this project I added cost terms for cross track error (CTE) and orientation error (EPSI). I weighted each of these terms very highly as these are the portions of the cost function designed to keep the car on the road.
-I also added a term for the difference between the current car velocity and a reference velocity. This term is designed to prevent the car from stopping in case all other cost terms are minimized.
-
-I then added a couple of terms to the cost function designed to minimize steering and throttle changes. Finally I added a couple of terms designed to minimize the rate of steering and throttle actuator changes. These final four terms do nothing for keeping the car on the road but are necessary to smooth the ride, and important, albeit secondary, goal.
-
-#### Constraints
-
-In addition to the cost function the model implementation consists of adding constraints. At a high level simple constraints were added to keep steering changes in the range [-25 degrees, +25 degrees] and to keep throttle changes in the range [-1.0, +1.0]. The goal of these constraints is to prevent large changes in steering - which may lead to the car becoming unstable and leaving the road - and in acceleration - which really pertains more to a smoother ride than anything else.
-
-The bulk of the constraints though are just the model state transition equations. The model state consists of six values: [x, y, psi, v, cte, epsi]. The first four represent the car's current position, orientation and speed. The last two represent the current cross track error and orientation error (in both cases this is just the difference between the desired value and the current value).
-
-[MPC model equations](doc/MPC.pdf)
+The heart of the MPC algorithm is the cost function - which can include many terms - and the state update equations added to the model as constraints.
 
 ### Setting Hyperparameters
 
 For this project there are really only two hyperparameters of note - total number of timesteps (N) and the time increment (dt) used to run successive steps of the model. The product of these two values (N * dt) determines the number of model steps for each telemetry packet received from the simulator.
 
 I began with the values used for the previous lessons, i.e., N=25 and dt=0.05. Via nothing more than trial and error I settled on values of N=10 and dt=0.1. The reasoning behind reducing the value of N was the sharp curves in the simulated road track. A larger value with a smaller delta time value led to the vehicle being unable to respond to the curves quickly enough. The reason for increasing the value of dt from 0.05 to 0.1 was simply to improve the performance of the model. Cutting the number of calculations in half greating improved performance while not sacrificing much accuracy.
+
+#### Constraints
+
+The state update equations for MPC are added to the model in the form of constraints. The model state consists of six values: [x, y, psi, v, cte, epsi]. The first four represent the car's current position, orientation and speed. The last two represent the current cross track error and orientation error. Both error terms are just the difference between the desired value and the current value.
+
+The desired cross track error is always 0 - meaning that the vehicle is exactly on the reference trajectory, which is the center of the lane. The desired orentation value is obtained empirically by running the vehicle around the track in the simulator with a constant steering angle and velocity on flat terrain. A constant is tuned until the desired effect is reached. For this project I simply used the value, Lf, provided in class.
+
+So the bulk of the contraints for the MPC are based on the six state transition equations depicted here: [MPC model equations](doc/MPC.pdf)
+
+Additionally simple contraints were added for the actuators. One to keep steering, delta, changes in the range [-25 degrees, +25 degrees] and another to keep throttle changes, a, in the range [-1.0, +1.0]. The goal of these constraints is to prevent large changes in steering - which may lead to the car becoming unstable and leaving the road - and in acceleration - which really pertains more to a smoother ride than anything else.
+
+#### Cost Function
+
+The cost function can include many terms. Other than the hyperparameters all tuning for this project occurs in deciding which terms to add to the cost function and how to weight those terms relative to the other terms.
+
+For this project I added cost terms for cross track error (CTE) and orientation error (EPSI). I weighted each of these terms very highly as these are the portions of the cost function designed to keep the car on the road.
+
+I also added a term for the difference between the current car velocity and a reference velocity. This term is designed to prevent the car from stopping in case all other cost terms are minimized.
+
+I then added a couple of terms to the cost function designed to minimize steering and throttle changes. Finally I added a couple of terms designed to minimize the rate of steering and throttle actuator changes. These final four terms do nothing for keeping the car on the road but are necessary to smooth the ride, and important, albeit secondary, goal.
 
 ### The Code
 
