@@ -13,6 +13,9 @@
 // for convenience
 using json = nlohmann::json;
 
+// Latency for actuator commands.
+const int latency = 100; // milliseconds
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -61,7 +64,10 @@ int main() {
           *
           */
 
+          //
           // Transform from global coordinates to car coordinates.
+          //
+
           // The global position of the car is (px, py).
           std::vector<double> ptsx_car(ptsx.size());
           std::vector<double> ptsy_car(ptsy.size());
@@ -75,28 +81,58 @@ int main() {
           Eigen::Map<Eigen::VectorXd> waypoints_x(ptsx_car.data(), ptsx_car.size());
           Eigen::Map<Eigen::VectorXd> waypoints_y(ptsy_car.data(), ptsy_car.size());
 
+          //
+          // Fit a polynomial to the converted waypoints.
+          //
+
           auto coeffs = polyfit(waypoints_x, waypoints_y, 3);
           auto coeffs_p = derivative(coeffs);
 
+          //
           // Set the initial state.
-          // Since we're car coordinates for our calculations, the initial position is (0, 0)
-          // rather than (px, py). Also the initial value for the steering angle will be 0.
+          //
+
+          // Now that we've converted waypoints from global coordinates to car coordinates,
+          // the initial position and orientation for the car can be set to 0.
+          px  = 0.0;
+          py  = 0.0;
+          psi = 0.0;
 
           // The initial CTE is just the difference between the function evaluated
           // at x and the initial value of y.
+          /*
+            cte = desired_y - actual_y
+                = f(px) - py
+                = polyeval(coeffs, px) - py
+                = polyeval(coeffs, 0)   // because px = py = 0
+          */
           double cte  = polyeval(coeffs, 0);  // f(px) - py
+
           // The initial orientation error is just the difference between the arctangent
           // of the function derivative evaluated at x and the initial value of psi.
           // Multiply by -1 to account for the difference between angles in our equations
           // vs the simulator.
-          //double epsi = -atan(polyeval(coeffs_p, 0)); // arctan(f'(px)) - psi
-          double epsi = -atan(coeffs[1]);  // p
+          /*
+            epsi = actual_psi - desired_psi
+                 = psi - atan(f'(px))
+                 = psi - atan(polyeval(coeffs_p, px))
+                 = -atan(polyeval(coeffs_p, 0))   // because psi = px = 0
+          */
+          double epsi = -atan(polyeval(coeffs_p, 0)); // psi - arctan(f'(px))
+
+          // Convert speed from miles/hour to meters/second.
+          // 1 mile == 1609.34 meters
+          // 1 hour == 3600 seconds
+          // 1609.34 / 3600 ~= 0.44704
+          v *= 0.44704;
 
           Eigen::VectorXd state(6);
-          //state << px, py, psi, v, cte, epsi;
-          state << 0.0, 0.0, 0.0, v, cte, epsi;
+          state << px, py, psi, v, cte, epsi;
 
-          // Solve.
+          //
+          // Solve for actuator values.
+          //
+
           auto vars = mpc.Solve(state, coeffs);
 
           // Exract the calculated steering and throttle values.
@@ -109,11 +145,18 @@ int main() {
           double steer_value    = -vars[0] / mpc.delta_limit;
           double throttle_value = vars[1];
 
+          //
+          // Update actuator values
+          //
+
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"]       = throttle_value;
 
-          //Display the MPC predicted trajectory
+          //
+          // Display the MPC predicted trajectory
+          //
+
           std::vector<double> mpc_x_vals;
           std::vector<double> mpc_y_vals;
 
@@ -127,13 +170,16 @@ int main() {
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          //Display the waypoints/reference line
+          //
+          // Display the waypoints/reference line
+          //
+
           std::vector<double> next_x_vals;
           std::vector<double> next_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-          for (double x = 0; x < 100; x += 2.5) {
+          for (double x = 0; x < 75; x += 2.5) {
             next_x_vals.push_back(x);
             next_y_vals.push_back(polyeval(coeffs, x));
           }
@@ -141,6 +187,9 @@ int main() {
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
+          //
+          // Send commands to the simulator.
+          //
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
@@ -153,7 +202,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          std::this_thread::sleep_for(std::chrono::milliseconds(latency));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
