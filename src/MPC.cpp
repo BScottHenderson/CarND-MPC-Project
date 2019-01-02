@@ -23,7 +23,11 @@ double dt = 0.1;  // Slightly more time between actuations due to latency.
 const double Lf = 2.67;
 
 // Reference velocity.
-const double ref_v = 55;
+// Convert miles/hour to meters/second.
+// 1 mile == 1609.34 meters
+// 1 hour == 3600 seconds
+// 1609.34 / 3600 ~= 0.44704
+const double ref_v = 55 * 0.44704;
 
 
 // The solver takes all the state variables and actuator variables in a single vector.
