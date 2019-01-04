@@ -199,7 +199,7 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-          for (double x = 0; x < 75; x += 2.5) {
+          for (double x = 5; x < 75; x += 2.5) {
             next_x_vals.push_back(x);
             next_y_vals.push_back(polyeval(coeffs, x));
           }
@@ -213,7 +213,7 @@ int main() {
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
-          
+
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.
