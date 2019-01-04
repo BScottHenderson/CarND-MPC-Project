@@ -8,7 +8,8 @@ const int           latency_ms = 100;                   // milliseconds
 const double        latency_s  = latency_ms * 0.001;    // seconds
 
 // TODO: Set the timestep length and duration
-const std::size_t   N  = 10;    // Shorter number of steps due to sharper curves.
+const std::size_t   N  = 10;    // Shorter number of steps due to sharper curves. Using a larger value
+                                // leads to instability.
                                 // No point in looking too far ahead when the state changes rapidly.
 const double        dt = latency_s;
 
@@ -29,6 +30,6 @@ const double        Lf = 2.67;
 //      1 mile == 1609.34 meters
 //      1 hour == 3600 seconds
 //      1609.34 / 3600 ~= 0.44704
-const double        ref_v = 55 * 0.44704;
+const double        ref_v = 85 * 0.44704;
 
 #endif /* CONSTANTS_H */
