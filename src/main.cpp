@@ -1,3 +1,4 @@
+#include "constants.h"
 #include "helper.h"
 #include "json.hpp"
 #include <math.h>
@@ -12,9 +13,6 @@
 
 // for convenience
 using json = nlohmann::json;
-
-// Latency for actuator commands.
-const int latency = 100; // milliseconds
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -56,6 +54,11 @@ int main() {
           double py  = j[1]["y"];
           double psi = j[1]["psi"];
           double v   = j[1]["speed"];
+
+          double delta = j[1]["steering_angle"];
+          delta *= -1;  // Change of sign because a positive value in the simulator is a left turn
+                        // while a positive value for the MPC equations is a right turn.
+          double a     = j[1]["throttle"];
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -126,12 +129,29 @@ int main() {
           // 1609.34 / 3600 ~= 0.44704
           v *= 0.44704;
 
-          Eigen::VectorXd state(6);
-          state << px, py, psi, v, cte, epsi;
+          //
+          // Update initial state for latency.
+          //
+
+          // Use the state transition equations to update the initial state
+          // to the end of the actuator latency period. These are the same
+          // equations used in the FG_eval.operator() method (in MPC.cpp)
+          // given that we assume the initial vehicle position and orientation
+          // are zero, i.e., (px, py, psi) = (0, 0, 0), and that dt is the latency.
+          px   += v * cos(psi) * latency_s;
+          py   += v * sin(psi) * latency_s;
+          cte  += v * sin(epsi) * latency_s;
+          epsi += (v / Lf) * delta * latency_s;
+
+          psi  += (v / Lf) * delta * latency_s;
+          v    += a * latency_s;
 
           //
           // Solve for actuator values.
           //
+
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, cte, epsi;
 
           auto vars = mpc.Solve(state, coeffs);
 
@@ -193,6 +213,7 @@ int main() {
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
+          
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.
@@ -202,7 +223,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          std::this_thread::sleep_for(std::chrono::milliseconds(latency));
+          std::this_thread::sleep_for(std::chrono::milliseconds(latency_ms));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
