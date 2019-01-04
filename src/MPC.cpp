@@ -71,13 +71,17 @@ class FG_eval {
 
     // Add some temporal smoothness by penalizing a large steering angle and
     // throttle change rates. Stop the loop at N - 2 because we're looking
-    // ahead one time step get get deltas.
+    // ahead one time step get get deltas and because we have just N - 1
+    // control inputs.
     for (std::size_t t = 0; t < N - 2; ++t) {
       AD<double> delta0 = vars[delta_start + t];
       AD<double> delta1 = vars[delta_start + t+1];
       AD<double> a0     = vars[a_start     + t];
       AD<double> a1     = vars[a_start     + t+1];
-      fg[0] += 100 * CppAD::pow(delta1 - delta0, 2);
+      fg[0] += 350 * CppAD::pow(delta1 - delta0, 2);
+        // At higher speeds it is necessary to reduce the tuning multiplier for
+        // steering angle, delta, changes because the vehicle must be able to
+        // respond quickly enough to make the corners.
       fg[0] += CppAD::pow(a1 - a0, 2);
     }
 
