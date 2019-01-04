@@ -105,8 +105,6 @@ class FG_eval {
       AD<double> cte0   = vars[cte_start   + t-1];
       AD<double> epsi0  = vars[epsi_start  + t-1];
       // Prior actuator values. Go back two steps to account for actuator latency.
-      //AD<double> delta0 = vars[delta_start + t-(t > 1 ? 2 : 1)];
-      //AD<double> a0     = vars[a_start     + t-(t > 1 ? 2 : 1)];
       AD<double> delta0 = vars[delta_start + t-1];
       AD<double> a0     = vars[a_start     + t-1];
       // Current state values.
