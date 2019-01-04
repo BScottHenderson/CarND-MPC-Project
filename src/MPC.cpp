@@ -1,4 +1,5 @@
 #include "MPC.h"
+#include "constants.h"
 #include "helper.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
@@ -6,43 +7,18 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
-size_t N = 10;  // Shorter number of steps due to sharper curves.
-double dt = 0.1;  // Slightly more time between actuations due to latency.
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
-
-// Reference velocity.
-// Convert miles/hour to meters/second.
-// 1 mile == 1609.34 meters
-// 1 hour == 3600 seconds
-// 1609.34 / 3600 ~= 0.44704
-const double ref_v = 55 * 0.44704;
-
-
 // The solver takes all the state variables and actuator variables in a single vector.
 // Set a few constants to indicate where each variable starts to make code clearer.
   // State
-size_t x_start     = 0;
-size_t y_start     = x_start     + N;
-size_t psi_start   = y_start     + N;
-size_t v_start     = psi_start   + N;
-size_t cte_start   = v_start     + N;
-size_t epsi_start  = cte_start   + N;
+std::size_t x_start     = 0;
+std::size_t y_start     = x_start     + N;
+std::size_t psi_start   = y_start     + N;
+std::size_t v_start     = psi_start   + N;
+std::size_t cte_start   = v_start     + N;
+std::size_t epsi_start  = cte_start   + N;
   // Control Inputs
-size_t delta_start = epsi_start  + N;
-size_t a_start     = delta_start + N - 1;
-
+std::size_t delta_start = epsi_start  + N;
+std::size_t a_start     = delta_start + N - 1;
 
 class FG_eval {
  public:
@@ -53,7 +29,6 @@ class FG_eval {
     this->coeffs = coeffs;
     this->coeffs_p = derivative(coeffs);
   }
-
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
@@ -71,13 +46,13 @@ class FG_eval {
     fg[0] = 0;
 
     // Reference State Cost
-    for (size_t t = 0; t < N; t++) {
+    for (std::size_t t = 0; t < N; ++t) {
       // Add CTE and orientation error to the cost. Multiply by a large value
       // to prioritize keeping these values as low as possible.
       AD<double> cte  = vars[cte_start  + t];
       AD<double> epsi = vars[epsi_start + t];
-      fg[0] += 1000 * CppAD::pow(cte, 2);
-      fg[0] += 1000 * CppAD::pow(epsi, 2);
+      fg[0] += CppAD::pow(cte, 2);
+      fg[0] += CppAD::pow(epsi, 2);
       // Enforce a reference velocity to prevent premature stopping.
       AD<double> v = vars[v_start + t];
       fg[0] += CppAD::pow(v - ref_v, 2);
@@ -87,23 +62,23 @@ class FG_eval {
     // *** So the loop should terminate at N-1 instead of N.
 
     // Penalize large steering angle and throttle changes to make the ride smoother.
-    for (size_t t = 0; t < N - 1; t++) {
+    for (std::size_t t = 0; t < N - 1; ++t) {
       AD<double> delta = vars[delta_start + t];
       AD<double> a     = vars[a_start     + t];
-      fg[0] += 100 * CppAD::pow(delta, 2);
-      fg[0] += 100 * CppAD::pow(a, 2);
+      fg[0] += CppAD::pow(delta, 2);
+      fg[0] += CppAD::pow(a, 2);
     }
 
     // Add some temporal smoothness by penalizing a large steering angle and
     // throttle change rates. Stop the loop at N - 2 because we're looking
     // ahead one time step get get deltas.
-    for (size_t t = 0; t < N - 2; t++) {
+    for (std::size_t t = 0; t < N - 2; ++t) {
       AD<double> delta0 = vars[delta_start + t];
       AD<double> delta1 = vars[delta_start + t+1];
       AD<double> a0     = vars[a_start     + t];
       AD<double> a1     = vars[a_start     + t+1];
-      fg[0] += 10 * CppAD::pow(delta1 - delta0, 2);
-      fg[0] += 10 * CppAD::pow(a1 - a0, 2);
+      fg[0] += 100 * CppAD::pow(delta1 - delta0, 2);
+      fg[0] += CppAD::pow(a1 - a0, 2);
     }
 
     //
@@ -121,7 +96,7 @@ class FG_eval {
 
     // The rest of the constraints - start at t=1 because t=0 is the initial state,
     // not calculated by the solver.
-    for (size_t t = 1; t < N; t++) {
+    for (std::size_t t = 1; t < N; ++t) {
       // Prior state values.
       AD<double> x0     = vars[x_start     + t-1];
       AD<double> y0     = vars[y_start     + t-1];
@@ -130,8 +105,10 @@ class FG_eval {
       AD<double> cte0   = vars[cte_start   + t-1];
       AD<double> epsi0  = vars[epsi_start  + t-1];
       // Prior actuator values. Go back two steps to account for actuator latency.
-      AD<double> delta0 = vars[delta_start + t-(t > 1 ? 2 : 1)];
-      AD<double> a0     = vars[a_start     + t-(t > 1 ? 2 : 1)];
+      //AD<double> delta0 = vars[delta_start + t-(t > 1 ? 2 : 1)];
+      //AD<double> a0     = vars[a_start     + t-(t > 1 ? 2 : 1)];
+      AD<double> delta0 = vars[delta_start + t-1];
+      AD<double> a0     = vars[a_start     + t-1];
       // Current state values.
       AD<double> x1     = vars[x_start    + t];
       AD<double> y1     = vars[y_start    + t];
@@ -157,6 +134,7 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
+
 MPC::MPC() { this->delta_limit = deg2rad(25); }
 MPC::~MPC() {}
 
@@ -182,9 +160,9 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Number of independent variables:
   //  one per model variable per time step
   //  one per actuator variable per actuation
-  size_t n_vars = N * 6 + (N - 1) * 2;
+  std::size_t n_vars = N * 6 + (N - 1) * 2;
   // We have one constraint per time step for each model variable.
-  size_t n_constraints = N * 6;
+  std::size_t n_constraints = N * 6;
 
   //
   // Initial value of the independent variables.
@@ -192,7 +170,7 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // SHOULD BE 0 besides initial state.
   Dvector vars(n_vars);
-  for (size_t i = 0; i < n_vars; i++) {
+  for (std::size_t i = 0; i < n_vars; ++i) {
     vars[i] = 0;
   }
   // Set the initial variable values (initial state).
@@ -212,7 +190,7 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
-  for (size_t i = 0; i < delta_start; i++) {
+  for (std::size_t i = 0; i < delta_start; ++i) {
     //vars_lowerbound[i] = std::numeric_limits<double>::min();
     //vars_upperbound[i] = std::numeric_limits<double>::max();
     vars_lowerbound[i] = -1.0e19;
@@ -221,13 +199,13 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
-  for (size_t i = delta_start; i < a_start; i++) {
+  for (std::size_t i = delta_start; i < a_start; ++i) {
     vars_lowerbound[i] = -this->delta_limit;//-0.436332;
     vars_upperbound[i] = this->delta_limit; //0.436332;
   }
 
   // Set a limit on acceleration.
-  for (size_t i = a_start; i < n_vars; i++) {
+  for (std::size_t i = a_start; i < n_vars; ++i) {
     vars_lowerbound[i] = -1.0;
     vars_upperbound[i] = 1.0;
   }
@@ -239,7 +217,7 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Should be 0 besides initial state.
   Dvector constraints_lowerbound(n_constraints);
   Dvector constraints_upperbound(n_constraints);
-  for (size_t i = 0; i < n_constraints; i++) {
+  for (std::size_t i = 0; i < n_constraints; ++i) {
     constraints_lowerbound[i] = 0;
     constraints_upperbound[i] = 0;
   }
@@ -305,7 +283,7 @@ std::vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   result.push_back(solution.x[a_start]);
 
   // Return predicted points.
-  for (size_t t = 0; t < N - 1; ++t) {
+  for (std::size_t t = 0; t < N - 1; ++t) {
     result.push_back(solution.x[x_start + t + 1]);
     result.push_back(solution.x[y_start + t + 1]);
   }
